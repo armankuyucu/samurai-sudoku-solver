@@ -1,5 +1,4 @@
 import time
-import concurrent.futures
 import threading
 
 # Global variable set to 0
@@ -10,6 +9,8 @@ topRightSudokuString = []
 bottomLeftSudokuString = []
 bottomRightSudokuString = []
 centerSudokuString = []
+
+thread1Steps = []
 
 start = time.perf_counter()
 
@@ -84,6 +85,7 @@ def findNextEmptyCell(grid):
 
 # Checks whether a value is valid by checking rows, columns and 3X3 sectors
 def isValid(grid, i, j, e):
+    # lock.acquire()
     rowOk = all([e != grid[i][x] for x in range(9)])
     if rowOk:
         columnOk = all([e != grid[x][j] for x in range(9)])
@@ -94,8 +96,11 @@ def isValid(grid, i, j, e):
             for x in range(secTopX, secTopX + 3):
                 for y in range(secTopY, secTopY + 3):
                     if grid[x][y] == e:
+                        # lock.release()
                         return False
+            # lock.release()
             return True
+    # lock.release()
     return False
 
 
@@ -103,11 +108,17 @@ def isValid(grid, i, j, e):
 # and some additional controls for where topLeftSudoku and centerSudoku intersects
 def isValidTopLeft(grid, i, j, e):
     if 6 <= i <= 8 and 6 <= j <= 8:
+        lock.acquire()
         intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
-            [e != centerSudoku[i - 6][x] for x in range(9)])
+            [e != centerSudoku[i - 6][x] for x in range(9)]) and all(
+            [e != topRightSudoku[i][x] for x in range(3)])
+
         if intersectRowOk:
             intersectColumnOk = all(
-                [e != grid[x][j] for x in range(9)]) and all([e != centerSudoku[x][j - 6] for x in range(9)])
+                [e != grid[x][j] for x in range(9)]) and all(
+                [e != centerSudoku[x][j - 6] for x in range(9)]) and all(
+                [e != bottomLeftSudoku[x][j] for x in range(3)])
+
             if intersectColumnOk:
                 # finding the top left x,y co-ordinates of
                 # the section or sub-grid containing the i,j cell
@@ -115,8 +126,13 @@ def isValidTopLeft(grid, i, j, e):
                 for x in range(secTopX, secTopX + 3):
                     for y in range(secTopY, secTopY + 3):
                         if grid[x][y] == e:
+                            lock.release()
                             return False
+                lock.release()
                 return True
+            lock.release()
+            return False
+        lock.release()
         return False
 
     else:
@@ -127,10 +143,15 @@ def isValidTopLeft(grid, i, j, e):
 # and some additional controls for where topRightSudoku and centerSudoku intersects
 def isValidTopRight(grid, i, j, e):
     if 6 <= i <= 8 and 0 <= j <= 2:
-        intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(e != centerSudoku[i - 6][x] for x in range(9))
+        lock.acquire()
+        intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
+            [e != centerSudoku[i - 6][x] for x in range(9)]) and all(
+            [e != topLeftSudoku[i][x+6] for x in range(3)])
         if intersectRowOk:
             intersectColumnOk = all(
-                [e != grid[x][j] for x in range(9)]) and all(e != centerSudoku[x][j + 6] for x in range(9))
+                [e != grid[x][j] for x in range(9)]) and all(
+                [e != centerSudoku[x][j + 6] for x in range(9)]) and all(
+                [e != bottomRightSudoku[x][j]] for x in range(3))
             if intersectColumnOk:
                 # finding the top left x,y co-ordinates of
                 # the section or sub-grid containing the i,j cell
@@ -138,8 +159,13 @@ def isValidTopRight(grid, i, j, e):
                 for x in range(secTopX, secTopX + 3):
                     for y in range(secTopY, secTopY + 3):
                         if grid[x][y] == e:
+                            lock.release()
                             return False
+                lock.release()
                 return True
+            lock.release()
+            return False
+        lock.release()
         return False
 
     else:
@@ -150,10 +176,16 @@ def isValidTopRight(grid, i, j, e):
 # and some additional controls for where bottomLeftSudoku and centerSudoku intersects
 def isValidBottomLeft(grid, i, j, e):
     if 0 <= i <= 2 and 6 <= j <= 8:
-        intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(e != centerSudoku[i + 6][x] for x in range(9))
+        lock.acquire()
+        intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
+            [e != centerSudoku[i + 6][x] for x in range(9)]) and all(
+            [e != bottomRightSudoku[i][x] for x in range(3)])
         if intersectRowOk:
             intersectColumnOk = all(
-                [e != grid[x][j] for x in range(9)]) and all(e != centerSudoku[x][j - 6] for x in range(9))
+                [e != grid[x][j] for x in range(9)]) and all(
+                [e != centerSudoku[x][j - 6] for x in range(9)]) and all(
+                [e != topLeftSudoku[x+6][j] for x in range(3)])
+
             if intersectColumnOk:
                 # finding the top left x,y co-ordinates of
                 # the section or sub-grid containing the i,j cell
@@ -161,8 +193,13 @@ def isValidBottomLeft(grid, i, j, e):
                 for x in range(secTopX, secTopX + 3):
                     for y in range(secTopY, secTopY + 3):
                         if grid[x][y] == e:
+                            lock.release()
                             return False
+                lock.release()
                 return True
+            lock.release()
+            return False
+        lock.release()
         return False
 
     else:
@@ -173,12 +210,15 @@ def isValidBottomLeft(grid, i, j, e):
 # and some additional controls for where bottomRightSudoku and centerSudoku intersects
 def isValidBottomRight(grid, i, j, e):
     if 0 <= i <= 2 and 0 <= j <= 2:
+        lock.acquire()
         intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
-            [e != centerSudoku[i + 6][x] for x in range(9)]
-            and [e != bottomLeftSudoku[i][x + 6] for x in range(2)])
+            [e != centerSudoku[i + 6][x] for x in range(9)]) and all(
+            [e != bottomLeftSudoku[i][x + 6] for x in range(3)])
         if intersectRowOk:
             intersectColumnOk = all(
-                [e != grid[x][j] for x in range(9)]) and all([e != centerSudoku[x][j + 6] for x in range(9)])
+                [e != grid[x][j] for x in range(9)]) and all(
+                [e != centerSudoku[x][j + 6] for x in range(9)]) and all(
+                [e != topRightSudoku[x+6][j] for x in range(3)])
             if intersectColumnOk:
                 # finding the top left x,y co-ordinates of
                 # the section or sub-grid containing the i,j cell
@@ -186,8 +226,13 @@ def isValidBottomRight(grid, i, j, e):
                 for x in range(secTopX, secTopX + 3):
                     for y in range(secTopY, secTopY + 3):
                         if grid[x][y] == e:
+                            lock.release()
                             return False
+                lock.release()
                 return True
+            lock.release()
+            return False
+        lock.release()
         return False
 
     else:
@@ -199,6 +244,7 @@ def isValidBottomRight(grid, i, j, e):
 def isValidCenter(grid, i, j, e):
     # Top Left Intersect
     if 0 <= i <= 2 and 0 <= j <= 2:
+        # print('Top Left' + 'i: ' + str(i) + 'j: ' + str(j))
         intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
             e != topLeftSudoku[i + 6][x] for x in range(9))
         if intersectRowOk:
@@ -217,6 +263,8 @@ def isValidCenter(grid, i, j, e):
 
     # Top Right Intersect
     elif 0 <= i <= 2 and 6 <= j <= 8:
+        # print('Top Right' + 'i: ' + str(i) + 'j: ' + str(j))
+
         intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
             e != topRightSudoku[i + 6][x] for x in range(9))
         if intersectRowOk:
@@ -235,6 +283,8 @@ def isValidCenter(grid, i, j, e):
 
     # Bottom Left Intersect
     elif 6 <= i <= 8 and 0 <= j <= 2:
+        # print('Bottom Left' + 'i: ' + str(i) + 'j: ' + str(j))
+
         intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
             e != bottomLeftSudoku[i - 6][x] for x in range(9))
         if intersectRowOk:
@@ -253,6 +303,8 @@ def isValidCenter(grid, i, j, e):
 
     # Bottom Right Intersect
     elif 6 <= i <= 8 and 6 <= j <= 8:
+        # print('Bottom Right' + 'i: ' + str(i) + 'j: ' + str(j))
+
         intersectRowOk = all([e != grid[i][x] for x in range(9)]) and all(
             e != bottomRightSudoku[i - 6][x] for x in range(9))
         if intersectRowOk:
@@ -273,20 +325,108 @@ def isValidCenter(grid, i, j, e):
         return isValid(grid, i, j, e)
 
 
+firstTimeForCenterSudoku = True
+firstTime = True
+
+def solveSudokuConstraints(grid, i=0, j=0):
+    if grid == topLeftSudoku:
+        topLeftCounter = 0
+        solution = 0
+        for e in range(1,10):
+            if isValidTopLeft(grid,i,j,e):
+                topLeftCounter += 1
+                solution = e
+        if topLeftCounter == 1:
+            topLeftSudoku[i][j] = solution
+            print(f'topLeft Constraints i: {i} j: {j} solution: {solution}')
+        # print('topLeftCounter ', topLeftCounter)
+
+    if grid == topRightSudoku:
+        topRightCounter = 0
+        solution = 0
+        for e in range(1,10):
+            if isValidTopRight(grid,i,j,e):
+                topRightCounter += 1
+                solution = e
+        if topRightCounter == 1:
+            topRightSudoku[i][j] = solution
+            print(f'topRight Constraints i: {i} j: {j} solution: {solution}')
+        # print('topRightCounter ', topRightCounter)
+
+    if grid == bottomLeftSudoku:
+        bottomLeftCounter = 0
+        solution = 0
+        for e in range(1,10):
+            if isValidBottomLeft(grid,i,j,e):
+                bottomLeftCounter += 1
+                solution = e
+        if bottomLeftCounter == 1:
+            bottomLeftSudoku[i][j] = solution
+            print(f'bottomLeft Constraints i: {i} j: {j} solution: {solution}')
+        # print('bottomLeftCounter ', bottomLeftCounter)
+
+    if grid == bottomRightSudoku:
+        bottomRightCounter = 0
+        solution = 0
+        for e in range(1,10):
+            if isValidBottomRight(grid,i,j,e):
+                bottomRightCounter += 1
+                solution = e
+        if bottomRightCounter == 1:
+            bottomRightSudoku[i][j] = solution
+            print(f'bottomRight Constraints i: {i} j: {j} solution: {solution}')
+        # print('bottomRightCounter ', bottomRightCounter)
+
+    if grid == centerSudoku:
+        centerCounter = 0
+        solution = 0
+        for e in range(1,10):
+            if isValidCenter(grid,i,j,e):
+                centerCounter += 1
+                solution = e
+        if centerCounter == 1:
+            centerSudoku[i][j] = solution
+            print(f'Center Constraints i: {i} j: {j} solution: {solution}')
+        # print('centerCounter ', centerCounter)
+
+
+
 def solveSudoku(grid, i=0, j=0):
 
-    # finds the next empty cell
-    i, j = findNextEmptyCell(grid)
+    global firstTime
 
-    if i == -1:  # it means that there are no empty cells left
-        return True
+    if firstTime:
+        print('GİRDİ')
+        for i in range(9):
+            for j in range(9):
+                if topLeftSudoku[i][j] == 0:
+                    solveSudokuConstraints(topLeftSudoku, i, j)
+
+                if topRightSudoku[i][j] == 0:
+                    solveSudokuConstraints(topRightSudoku, i, j)
+
+                if bottomLeftSudoku[i][j] == 0:
+                    solveSudokuConstraints(bottomLeftSudoku, i, j)
+
+                if bottomRightSudoku[i][j] == 0:
+                    solveSudokuConstraints(bottomRightSudoku, i, j)
+
+                if centerSudoku[i][j] == 0:
+                    solveSudokuConstraints(centerSudoku, i, j)
+        firstTime = False
 
     if grid == topLeftSudoku:
+        # finds the next empty cell
+        i, j = findNextEmptyCell(grid)
+        if i == -1:  # it means that there are no empty cells left
+            return True
 
         for e in range(1, 10):
             # Try different values in i, j location
             if isValidTopLeft(grid, i, j, e):
                 grid[i][j] = e
+
+                #thread1Steps.append(e)
                 if solveSudoku(grid, i, j):
                     return True
 
@@ -294,11 +434,17 @@ def solveSudoku(grid, i=0, j=0):
                 grid[i][j] = 0
 
     elif grid == topRightSudoku:
+        # t1.join()
+        # finds the next empty cell
+        i, j = findNextEmptyCell(grid)
+        if i == -1:  # it means that there are no empty cells left
+            return True
 
         for e in range(1, 10):
             # Try different values in i, j location
             if isValidTopRight(grid, i, j, e):
                 grid[i][j] = e
+
                 if solveSudoku(grid, i, j):
                     return True
 
@@ -306,11 +452,17 @@ def solveSudoku(grid, i=0, j=0):
                 grid[i][j] = 0
 
     elif grid == bottomLeftSudoku:
+        # t2.join()
+        # finds the next empty cell
+        i, j = findNextEmptyCell(grid)
+        if i == -1:  # it means that there are no empty cells left
+            return True
 
         for e in range(1, 10):
             # Try different values in i, j location
             if isValidBottomLeft(grid, i, j, e):
                 grid[i][j] = e
+
                 if solveSudoku(grid, i, j):
                     return True
 
@@ -318,6 +470,11 @@ def solveSudoku(grid, i=0, j=0):
                 grid[i][j] = 0
 
     elif grid == bottomRightSudoku:
+        # t3.join()
+        # finds the next empty cell
+        i, j = findNextEmptyCell(grid)
+        if i == -1:  # it means that there are no empty cells left
+            return True
 
         for e in range(1, 10):
             # Try different values in i, j location
@@ -330,28 +487,41 @@ def solveSudoku(grid, i=0, j=0):
                 grid[i][j] = 0
 
     elif grid == centerSudoku:
-        # if 0 <= i <= 2 and 0 <= j <= 2:
-        for i in range(0, 3):
-            for j in range(0, 3):
-                centerSudoku[i][j] = topLeftSudoku[i + 6][j + 6]
+        t1.join()
+        t2.join()
+        t3.join()
+        t4.join()
 
-        # elif 0 <= i <= 2 and 6 <= j <= 8:
-        for i in range(0, 3):
-            for j in range(6, 9):
-                centerSudoku[i][j] = topRightSudoku[i + 6][j - 6]
+        global firstTimeForCenterSudoku
 
-        # elif 6 <= i <= 8 and 0 <= j <= 2:
-        for i in range(6, 9):
-            for j in range(0, 3):
-                centerSudoku[i][j] = bottomLeftSudoku[i - 6][j + 6]
+        if firstTimeForCenterSudoku:
+            # if 0 <= i <= 2 and 0 <= j <= 2:
+            for i in range(0, 3):
+                for j in range(0, 3):
+                    centerSudoku[i][j] = topLeftSudoku[i + 6][j + 6]
 
-        # elif 6 <= i <= 8 and 6 <= j <= 8:
-        for i in range(6, 9):
-            for j in range(6, 9):
-                centerSudoku[i][j] = bottomRightSudoku[i - 6][j - 6]
+            # if 0 <= i <= 2 and 6 <= j <= 8:
+            for i in range(0, 3):
+                for j in range(6, 9):
+                    centerSudoku[i][j] = topRightSudoku[i + 6][j - 6]
+
+            # if 6 <= i <= 8 and 0 <= j <= 2:
+            for i in range(6, 9):
+                for j in range(0, 3):
+                    centerSudoku[i][j] = bottomLeftSudoku[i - 6][j + 6]
+
+            # if 6 <= i <= 8 and 6 <= j <= 8:
+            for i in range(6, 9):
+                for j in range(6, 9):
+                    centerSudoku[i][j] = bottomRightSudoku[i - 6][j - 6]
+
+            firstTimeForCenterSudoku = False
 
         # finds the next empty cell
         i, j = findNextEmptyCell(grid)
+        if i == -1:  # it means that there are no empty cells left
+            return True
+        # print('test ' + 'i: ' + str(i) + ' j: ' + str(j))
 
         for e in range(1, 10):
             # Try different values in i, j location
@@ -364,26 +534,6 @@ def solveSudoku(grid, i=0, j=0):
                 grid[i][j] = 0
 
     return False
-
-
-# def solveSudokuCenter(grid):
-#     for i in range(0,3):
-#         for j in range(0,3):
-#             centerSudoku[i][j] = topLeftSudoku[i+6][j+6]
-#
-#     for i in range(0,3):
-#         for j in range(6,9):
-#             centerSudoku[i][j] = topRightSudoku[i+6][j-6]
-#
-#     for i in range(6,9):
-#         for j in range(0,3):
-#             centerSudoku[i][j] = bottomLeftSudoku[i-6][j+6]
-#
-#     for i in range(6,9):
-#         for j in range(6,9):
-#             centerSudoku[i][j] = bottomRightSudoku[i-6][j-6]
-#
-#     return solveSudoku(grid)
 
 
 def printSudoku(grid):
@@ -401,24 +551,33 @@ def printResult(name, grid):
     printSudoku(grid)
 
 
-# with concurrent.futures.ThreadPoolExecutor() as executor:
-#     f1 = executor.submit(solveSudoku, topLeftSudoku)
-#     #print(f1.result())
+# printResult('topLeftSudoku', topLeftSudoku)
 #
-#     f2 = executor.submit(solveSudoku, topRightSudoku)
-#     #print(f2.result())
+# printResult('topRightSudoku', topRightSudoku)
 #
-#     f4 = executor.submit(solveSudoku, bottomLeftSudoku)
-#     #print(f4.result())
+# printResult('centerSudoku', centerSudoku)
 #
-#     f5 = executor.submit(solveSudoku, bottomRightSudoku)
-#     #print(f5.result())
+# printResult('bottomLeftSudoku', bottomLeftSudoku)
+# printResult('bottomRightSudoku', bottomRightSudoku)
 #
-#     if f1.done() and f2.done():
-#         finish = time.perf_counter()
-#         print(f'f1 fone in {finish - start} second(s)')
-#         f3 = executor.submit(solveSudokuCenter, centerSudoku)
-#         print(f3.result())
+# print('*' * 50)
+
+printResult('topLeftSudoku', topLeftSudoku)
+printResult('topRightSudoku', topRightSudoku)
+printResult('centerSudoku', centerSudoku)
+printResult('bottomLeftSudoku', bottomLeftSudoku)
+printResult('bottomRightSudoku', bottomRightSudoku)
+print('*' * 50)
+
+# creating a RLock
+lock = threading.RLock()
+
+# for i in range(9):
+#     for j in range(9):
+#         if bottomRightSudoku[i][j] == 0:
+#             solveSudokuConstraints(bottomRightSudoku,i,j)
+
+t0 = threading.Thread(target=solveSudokuConstraints)
 
 t1 = threading.Thread(target=solveSudoku, args=(topLeftSudoku,))
 t1.start()
@@ -427,6 +586,7 @@ t1.join()
 t2 = threading.Thread(target=solveSudoku, args=(topRightSudoku,))
 t2.start()
 t2.join()
+
 
 t3 = threading.Thread(target=solveSudoku, args=(bottomLeftSudoku,))
 t3.start()
@@ -440,51 +600,22 @@ t5 = threading.Thread(target=solveSudoku, args=(centerSudoku,))
 t5.start()
 t5.join()
 
-print('*' * 50)
+
+t1.join()
+t2.join()
+t3.join()
+t4.join()
+t5.join()
+
 printResult('topLeftSudoku', topLeftSudoku)
-
 printResult('topRightSudoku', topRightSudoku)
-
 printResult('centerSudoku', centerSudoku)
-
 printResult('bottomLeftSudoku', bottomLeftSudoku)
 printResult('bottomRightSudoku', bottomRightSudoku)
 
-# print('\n------ topLeftSudoku ------\n')
-# backtracks = 0
-# #printSudoku(topLeftSudoku)
-# print(solveSudoku(topLeftSudoku))
-# printSudoku(topLeftSudoku)
-# print('Backtracks = ', backtracks)
-#
-# print('\n------ topRightSudoku ------\n')
-# backtracks = 0
-# #printSudoku(topRightSudoku)
-# print(solveSudoku(topRightSudoku))
-# printSudoku(topRightSudoku)
-# print('Backtracks = ', backtracks)
-#
-# print('\n------ centerSudoku ------\n')
-# backtracks = 0
-# #printSudoku(centerSudoku)
-# print(solveSudoku(centerSudoku))
-# printSudoku(centerSudoku)
-# print('Backtracks = ', backtracks)
-#
-# print('\n------ bottomLeftSudoku ------\n')
-# backtracks = 0
-# #printSudoku(bottomLeftSudoku)
-# print(solveSudoku(bottomLeftSudoku))
-# printSudoku(bottomLeftSudoku)
-# print('Backtracks = ', backtracks)
-#
-# print('\n------ bottomRightSudoku ------\n')
-# backtracks = 0
-# #printSudoku(bottomRightSudoku)
-# print(solveSudoku(bottomRightSudoku))
-# printSudoku(bottomRightSudoku)
-# print('Backtracks = ', backtracks)
-
+with open('thread1.txt', 'w') as thread1FileObject:
+    for steps in thread1Steps:
+        thread1FileObject.write(str(steps) + '\n')
 finish = time.perf_counter()
 
 print(f'Finished in {finish - start} second(s)')
