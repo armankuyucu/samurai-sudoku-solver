@@ -325,10 +325,11 @@ def isValidCenter(grid, i, j, e):
         return isValid(grid, i, j, e)
 
 
-firstTimeForCenterSudoku = True
 firstTime = True
 
+
 def solveSudokuConstraints(grid, i=0, j=0):
+
     if grid == topLeftSudoku:
         topLeftCounter = 0
         solution = 0
@@ -338,6 +339,8 @@ def solveSudokuConstraints(grid, i=0, j=0):
                 solution = e
         if topLeftCounter == 1:
             topLeftSudoku[i][j] = solution
+            if 6 <= i <= 8 and 6 <= j <= 8:
+                centerSudoku[i-6][j-6] = solution
             print(f'topLeft Constraints i: {i} j: {j} solution: {solution}')
         # print('topLeftCounter ', topLeftCounter)
 
@@ -351,6 +354,8 @@ def solveSudokuConstraints(grid, i=0, j=0):
         if topRightCounter == 1:
             topRightSudoku[i][j] = solution
             print(f'topRight Constraints i: {i} j: {j} solution: {solution}')
+            if 6 <= i <= 8 and 0 <= j <= 2:
+                centerSudoku[i-6][j+6] = solution
         # print('topRightCounter ', topRightCounter)
 
     if grid == bottomLeftSudoku:
@@ -362,6 +367,8 @@ def solveSudokuConstraints(grid, i=0, j=0):
                 solution = e
         if bottomLeftCounter == 1:
             bottomLeftSudoku[i][j] = solution
+            if 0 <= i <= 2 and 6 <= j <= 8:
+                centerSudoku[i+6][j-6] = solution
             print(f'bottomLeft Constraints i: {i} j: {j} solution: {solution}')
         # print('bottomLeftCounter ', bottomLeftCounter)
 
@@ -374,6 +381,8 @@ def solveSudokuConstraints(grid, i=0, j=0):
                 solution = e
         if bottomRightCounter == 1:
             bottomRightSudoku[i][j] = solution
+            if 0 <= i <= 2 and 0 <= j <= 2:
+                centerSudoku[i+6][j+6] = solution
             print(f'bottomRight Constraints i: {i} j: {j} solution: {solution}')
         # print('bottomRightCounter ', bottomRightCounter)
 
@@ -386,34 +395,51 @@ def solveSudokuConstraints(grid, i=0, j=0):
                 solution = e
         if centerCounter == 1:
             centerSudoku[i][j] = solution
+            # Top Left
+            if 0 <= i <= 2 and 0 <= j <= 2:
+                topLeftSudoku[i+6][j+6] = solution
+            # Top Right
+            elif 0 <= i <= 2 and 6 <= j <= 8:
+                topRightSudoku[i+6][j-6] = solution
+            # Bottom Left
+            elif 6 <= i <= 8 and 0 <= j <= 2:
+                bottomLeftSudoku[i-6][j+6] = solution
+            # Bottom Right
+            elif 6 <= i <= 8 and 6 <= j <= 8:
+                bottomRightSudoku[i-6][j-6] = solution
+
             print(f'Center Constraints i: {i} j: {j} solution: {solution}')
         # print('centerCounter ', centerCounter)
 
 
+def solveSudokuConstraintsHelper():
+    for i in range(9):
+        for j in range(9):
+            if centerSudoku[i][j] == 0:
+                solveSudokuConstraints(centerSudoku, i, j)
+
+    for i in range(9):
+        for j in range(9):
+            if topLeftSudoku[i][j] == 0:
+                solveSudokuConstraints(topLeftSudoku, i, j)
+
+    for i in range(9):
+        for j in range(9):
+            if topRightSudoku[i][j] == 0:
+                solveSudokuConstraints(topRightSudoku, i, j)
+
+    for i in range(9):
+        for j in range(9):
+            if bottomLeftSudoku[i][j] == 0:
+                solveSudokuConstraints(bottomLeftSudoku, i, j)
+
+    for i in range(9):
+        for j in range(9):
+            if bottomRightSudoku[i][j] == 0:
+                solveSudokuConstraints(bottomRightSudoku, i, j)
+
 
 def solveSudoku(grid, i=0, j=0):
-
-    global firstTime
-
-    if firstTime:
-        print('GİRDİ')
-        for i in range(9):
-            for j in range(9):
-                if topLeftSudoku[i][j] == 0:
-                    solveSudokuConstraints(topLeftSudoku, i, j)
-
-                if topRightSudoku[i][j] == 0:
-                    solveSudokuConstraints(topRightSudoku, i, j)
-
-                if bottomLeftSudoku[i][j] == 0:
-                    solveSudokuConstraints(bottomLeftSudoku, i, j)
-
-                if bottomRightSudoku[i][j] == 0:
-                    solveSudokuConstraints(bottomRightSudoku, i, j)
-
-                if centerSudoku[i][j] == 0:
-                    solveSudokuConstraints(centerSudoku, i, j)
-        firstTime = False
 
     if grid == topLeftSudoku:
         # finds the next empty cell
@@ -487,14 +513,14 @@ def solveSudoku(grid, i=0, j=0):
                 grid[i][j] = 0
 
     elif grid == centerSudoku:
-        t1.join()
-        t2.join()
-        t3.join()
-        t4.join()
+        # t1.join()
+        # t2.join()
+        # t3.join()
+        # t4.join()
 
-        global firstTimeForCenterSudoku
+        global firstTime
 
-        if firstTimeForCenterSudoku:
+        if firstTime:
             # if 0 <= i <= 2 and 0 <= j <= 2:
             for i in range(0, 3):
                 for j in range(0, 3):
@@ -515,7 +541,7 @@ def solveSudoku(grid, i=0, j=0):
                 for j in range(6, 9):
                     centerSudoku[i][j] = bottomRightSudoku[i - 6][j - 6]
 
-            firstTimeForCenterSudoku = False
+            firstTime = False
 
         # finds the next empty cell
         i, j = findNextEmptyCell(grid)
@@ -572,12 +598,9 @@ print('*' * 50)
 # creating a RLock
 lock = threading.RLock()
 
-# for i in range(9):
-#     for j in range(9):
-#         if bottomRightSudoku[i][j] == 0:
-#             solveSudokuConstraints(bottomRightSudoku,i,j)
-
-t0 = threading.Thread(target=solveSudokuConstraints)
+t0 = threading.Thread(target=solveSudokuConstraintsHelper)
+t0.start()
+t0.join()
 
 t1 = threading.Thread(target=solveSudoku, args=(topLeftSudoku,))
 t1.start()
