@@ -1,17 +1,16 @@
 import time
 import threading
 from tkinter import *
+import matplotlib.pyplot as plt
 
 # Global variable set to 0
 backtracks = 0
-
 
 topLeftSudoku = []
 topRightSudoku = []
 bottomLeftSudoku = []
 bottomRightSudoku = []
 centerSudoku = []
-
 
 thread1Steps = []
 thread2Steps = []
@@ -27,10 +26,14 @@ thread10Steps = []
 # creating a RLock
 lock = threading.RLock()
 
+fiveThreadsDuration = 0
+tenThreadsDuration = 0
+emptySquares = 0
+
 
 # reads the text file
 def readFromTxt():
-    with open('testSudokuHard.txt', 'r') as f:
+    with open('testSudoku3.txt', 'r') as f:
         global topLeftSudoku
         global topRightSudoku
         global bottomLeftSudoku
@@ -119,7 +122,6 @@ def findNextEmptyCellReversed(grid):
             if grid[x][y] == 0:
                 return x, y
     return -1, -1
-
 
 
 # Checks whether a value is valid by checking rows, columns and 3X3 sectors
@@ -645,31 +647,6 @@ def printResult(name, grid):
     printSudoku(grid)
 
 
-# def gui():
-#     window = Tk()  # instantiate an instance of a window
-#     # window.geometry("800x800")
-#     window.title("Samurai Sudoku")
-#     window.configure(bg="white")
-#
-#     tenThreadsButton = Button(window,
-#                               text="solve using 10 threads",
-#                               command=lambda: solve(10),
-#                               font=("Comic Sans", 25),
-#                               padx=25,
-#                               pady=25)
-#
-#     fiveThreadsButton = Button(window,
-#                                text="solve using 5 threads",
-#                                command=lambda: solve(5),
-#                                font=("Comic Sans", 25),
-#                                padx=25,
-#                                pady=25)
-#
-#     tenThreadsButton.grid(row=0, column=1)
-#     fiveThreadsButton.grid(row=0, column=0)
-#     window.mainloop()
-
-
 def sudokuGui():
     window = Tk()  # instantiate an instance of a window
     # window.geometry("800x800")
@@ -679,8 +656,6 @@ def sudokuGui():
     solve(5)
     solve(10)
 
-    # tenThreadsButton.grid_forget()
-    # fiveThreadsButton.grid_forget()
     # Bottom Right
     guiSectors(4, 4, bottomRightSudoku, window)
     # Bottom Left
@@ -692,11 +667,42 @@ def sudokuGui():
     # Top Left
     guiSectors(0, 0, topLeftSudoku, window)
 
+    graphGui()
     window.mainloop()
 
 
+# Finds the number of empty squares on a sudoku
+def emptySquareCount():
+    counter = 0
+    for i in range(9):
+        for j in range(9):
+            if topLeftSudoku[i][j] == 0:
+                counter += 1
+            if topRightSudoku[i][j] == 0:
+                counter += 1
+            if bottomLeftSudoku[i][j] == 0:
+                counter += 1
+            if bottomRightSudoku[i][j] == 0:
+                counter += 1
+            if ((0 <= i <= 2 and 0 <= j <= 2) or (0 <= i <= 2 and 6 <= j <= 8) or (6 <= i <= 8 and 0 <= j <= 2) or (
+                    6 <= i <= 8) and (6 <= j <= 8)) and centerSudoku == 0:
+                counter += 1
+
+    return counter
+
+
 def graphGui():
-    pass
+    x = [0, fiveThreadsDuration]
+    x2 = [0, tenThreadsDuration]
+    global emptySquares
+    y = [0, emptySquares]
+    plt.plot(x, y, color='blue')
+    plt.plot(x2, y, color='red')
+
+    plt.title('mavi: 5 Thread, kırmızı: 10 Thread')
+    plt.ylabel('Kare sayısı')
+    plt.xlabel('Geçen süre')
+    plt.show()
 
 
 def guiSectors(sectorRow, sectorCol, grid, window):
@@ -752,20 +758,26 @@ def writeToTxt(threadNumber):
 
 
 def solve(threadNumber):
-
     if threadNumber == 5:
         start = time.perf_counter()
+        print('-- Before --')
+        printResult('topLeftSudoku', topLeftSudoku)
+        printResult('topRightSudoku', topRightSudoku)
+        printResult('centerSudoku', centerSudoku)
+        printResult('bottomLeftSudoku', bottomLeftSudoku)
+        printResult('bottomRightSudoku', bottomRightSudoku)
 
         for c in range(10):
             solveSudokuConstraintsHelper()
 
+        global emptySquares
+        emptySquares = emptySquareCount()
 
         t1 = threading.Thread(target=solveSudoku, args=(topLeftSudoku, 1))
         t2 = threading.Thread(target=solveSudoku, args=(topRightSudoku, 2))
         t3 = threading.Thread(target=solveSudoku, args=(bottomLeftSudoku, 3))
         t4 = threading.Thread(target=solveSudoku, args=(bottomRightSudoku, 4))
         t5 = threading.Thread(target=solveSudoku, args=(centerSudoku, 5))
-
 
         # Top Left Sudoku
         t1.start()
@@ -787,7 +799,6 @@ def solve(threadNumber):
         t5.start()
         t5.join()
 
-
         writeToTxt(5)
         print('*' * 50)
         print('-- 5 Threads --')
@@ -799,7 +810,8 @@ def solve(threadNumber):
 
         finish = time.perf_counter()
         print(f'Finished in {finish - start} second(s)\n')
-        # graphGui(finish-start)
+        global fiveThreadsDuration
+        fiveThreadsDuration = finish - start
 
     elif threadNumber == 10:
         readFromTxt()
@@ -808,7 +820,6 @@ def solve(threadNumber):
 
         for c in range(10):
             solveSudokuConstraintsHelper()
-
 
         t1 = threading.Thread(target=solveSudoku, args=(topLeftSudoku, 1))
         t6 = threading.Thread(target=solveSudoku, args=(topLeftSudoku, 6))
@@ -824,7 +835,6 @@ def solve(threadNumber):
 
         t5 = threading.Thread(target=solveSudoku, args=(centerSudoku, 5))
         t10 = threading.Thread(target=solveSudoku, args=(centerSudoku, 10))
-
 
         # Top Left Sudoku
         t1.start()
@@ -871,125 +881,11 @@ def solve(threadNumber):
 
         finishTenThreads = time.perf_counter()
         print(f'Finished in {finishTenThreads - startTenThreads} second(s)\n')
+
         writeToTxt(10)
-        # graphGui(finish-startTenThreads)
+
+        global tenThreadsDuration
+        tenThreadsDuration = finishTenThreads - startTenThreads
 
 
 sudokuGui()
-graphGui()
-
-
-# def solveFiveThreads():
-#     start = time.perf_counter()
-#
-#     for c in range(10):
-#         solveSudokuConstraintsHelper()
-#
-#     print('*' * 50)
-#
-#     printResult('topLeftSudoku', topLeftSudoku)
-#     printResult('topRightSudoku', topRightSudoku)
-#     printResult('centerSudoku', centerSudoku)
-#     printResult('bottomLeftSudoku', bottomLeftSudoku)
-#     printResult('bottomRightSudoku', bottomRightSudoku)
-#     print('*' * 50)
-#
-#     # Top Left Sudoku
-#     t1.start()
-#     t1.join()
-#
-#     # Top Right Sudoku
-#     t2.start()
-#     t2.join()
-#
-#     # Bottom Left Sudoku
-#     t3.start()
-#     t3.join()
-#
-#     # Bottom Right Sudoku
-#     t4.start()
-#     t4.join()
-#
-#     # Center Sudoku
-#     t5.start()
-#     t5.join()
-#
-#     printResult('topLeftSudoku', topLeftSudoku)
-#     printResult('topRightSudoku', topRightSudoku)
-#     printResult('centerSudoku', centerSudoku)
-#     printResult('bottomLeftSudoku', bottomLeftSudoku)
-#     printResult('bottomRightSudoku', bottomRightSudoku)
-#     sudokuGui()
-#
-#     with open('thread1.txt', 'w') as thread1FileObject:
-#         for steps in thread1Steps:
-#             thread1FileObject.write(steps + '\n')
-#     finish = time.perf_counter()
-#
-#     print(f'Finished in {finish - start} second(s)')
-
-
-# # Controls if the e value causes the other sudoku to be unsolvable
-# def solveSudokuImplications(grid, i, j):
-#
-#     if grid == topLeftSudoku:
-#         topLeftCounter = 0
-#         for e in range(1,10):
-#             if isValidTopLeft(grid,i,j,e):
-#                 topLeftCounter += 1
-#         if topLeftCounter >= 1:
-#             return True
-#         else:
-#             return False
-#
-#     if grid == topRightSudoku:
-#         topRightCounter = 0
-#         for e in range(1,10):
-#             if isValidTopRight(grid,i,j,e):
-#                 topRightCounter += 1
-#         if topRightCounter >= 1:
-#             return True
-#         else:
-#             return False
-#
-#     if grid == bottomLeftSudoku:
-#         bottomLeftCounter = 0
-#         for e in range(1,10):
-#             if isValidBottomLeft(grid,i,j,e):
-#                 bottomLeftCounter += 1
-#         if bottomLeftCounter >= 1:
-#             return True
-#         else:
-#             return False
-#
-#     if grid == bottomRightSudoku:
-#         bottomRightCounter = 0
-#         for e in range(1,10):
-#             if isValidBottomRight(grid,i,j,e):
-#                 bottomRightCounter += 1
-#         if bottomRightCounter >= 1:
-#             return True
-#         else:
-#             return False
-
-
-# def checkOtherSudoku(grid, i, j, e):
-#
-#     if grid == topLeftSudoku:
-#         topRightCounter = 0
-#
-#         for c in range(0, 3):
-#             if topRightSudoku[6][c] == 0:
-#
-#                 for e in range(1, 10):
-#                     if isValidTopRight(grid, i, c, e, ):
-#                         topRightCounter += 1
-#
-#                 if topRightCounter > 0:
-#                     return True
-#                 else:
-#                     return False
-#             else:
-#                 return True
-#
-#     return True
